@@ -14,7 +14,7 @@ Mfumo wa kusimamia maisha yako binafsi (Habits, Tasks, Finance, na Roadmap) ulio
 
 1. **Clone Repository:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/life-os-dashboard.git
+   git clone https://github.com/mrdata36/life-os-dashboard.git
    cd life-os-dashboard
    ```
 
