@@ -1,34 +1,25 @@
-# Life OS Dashboard
+# Task Monitor & Life OS
 
-Mfumo wa kusimamia maisha yako binafsi (Habits, Tasks, Finance, na Roadmap) uliojengwa kwa PHP na PostgreSQL.
+Mfumo wa kusimamia maisha, miradi, na fedha kwa ajili ya Watanzania.
 
 ## Vipengele (Features)
-- **Habit Tracker:** Fuatilia tabia zako za kila siku.
-- **Task Manager:** Orodha ya kazi za kufanya.
-- **Finance Tracker:** Simamia mapato na matumizi.
-- **Roadmap & Challenge:** Panga malengo ya muda mrefu.
-- **Pomodoro Timer:** Saa ya kuzingatia kazi.
-- **User System:** Login, Register, na Profile management.
+- **Dashboard:** Takwimu za tabia na kazi za kila siku.
+- **Projects:** Usimamizi wa miradi na hatua zake (Milestones).
+- **Roadmap:** Mpango wa siku 30 wa kujifunza au malengo.
+- **Finance:** Usimamizi wa mapato na matumizi.
+- **AI Insights:** Ushauri wa akili bandia kuhusu maendeleo yako.
+- **Lugha:** Inatumia Kiswahili na Kiingereza.
 
 ## Jinsi ya Kuanza (Installation)
+1. Clone project hii.
+2. Tengeneza database ya PostgreSQL inayoitwa `task_monitor`.
+3. Badilisha settings kwenye `config/db.php`.
+4. Run `install.php` au tumia `sql/database.sql` kuweka majedwali.
 
-1. **Clone Repository:**
-   ```bash
-   git clone https://github.com/mrdata36/life-os-dashboard.git
-   cd life-os-dashboard
-   ```
+## Teknolojia
+- PHP (Native)
+- PostgreSQL
+- Tailwind CSS
+- JavaScript
 
-2. **Database Setup:**
-   - Tengeneza database mpya ya PostgreSQL inayoitwa `task_monitor`.
-   - Copy faili la config:
-     ```bash
-     cp config/db.example.php config/db.php
-     ```
-   - Fungua `config/db.php` na uweke username na password yako ya database.
-
-3. **Run Installer:**
-   - Fungua browser na nenda: `http://localhost/life-os-dashboard/public/install.php`
-   - Bonyeza "Run Installer" kutengeneza majedwali.
-
-4. **Anza Kutumia:**
-   - Nenda `public/index.php` na uanze kutumia mfumo!
+Imetengenezwa kwa ❤️ Tanzania.

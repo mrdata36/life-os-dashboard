@@ -121,3 +121,41 @@ CREATE TABLE IF NOT EXISTS pomodoro_sessions (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(100);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_number VARCHAR(20);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_image VARCHAR(255);
+
+-- Projects Table (New Feature)
+CREATE TABLE IF NOT EXISTS projects (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(200) NOT NULL,
+    description TEXT,
+    start_date DATE,
+    end_date DATE,
+    status VARCHAR(20) DEFAULT 'planned', -- planned, in_progress, completed, on_hold
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Project Milestones
+CREATE TABLE IF NOT EXISTS project_milestones (
+    id SERIAL PRIMARY KEY,
+    project_id INT REFERENCES projects(id) ON DELETE CASCADE,
+    title VARCHAR(200) NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending',
+    due_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Project Updates / Timeline (New Feature)
+CREATE TABLE IF NOT EXISTS project_updates (
+    id SERIAL PRIMARY KEY,
+    project_id INT REFERENCES projects(id) ON DELETE CASCADE,
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    update_text TEXT NOT NULL, -- Nini kimefanyika
+    remaining_work TEXT,       -- Nini kimebaki
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- MIGRATION: Add description to milestones for better planning
+ALTER TABLE project_milestones ADD COLUMN IF NOT EXISTS description TEXT;
+
+-- MIGRATION: Add completion notes (Evidence of work done)
+ALTER TABLE project_milestones ADD COLUMN IF NOT EXISTS completion_notes TEXT;

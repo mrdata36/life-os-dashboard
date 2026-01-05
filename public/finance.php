@@ -1,215 +1,158 @@
 <?php
 require '../config/db.php';
+require_login();
+$user_id = get_user_id();
 
-// Fetch Totals
-try {
-    $income = $pdo->query("SELECT SUM(amount) FROM transactions WHERE type = 'income'")->fetchColumn() ?: 0;
-    $expense = $pdo->query("SELECT SUM(amount) FROM transactions WHERE type = 'expense'")->fetchColumn() ?: 0;
-    $balance = $income - $expense;
-
-    // Fetch Recent Transactions
-    $transactions = $pdo->query("SELECT * FROM transactions ORDER BY transaction_date DESC, id DESC LIMIT 10")->fetchAll();
-
-    // Fetch Goals
-    $goals = $pdo->query("SELECT * FROM savings_goals ORDER BY id ASC")->fetchAll();
-
-    // NEW: Fetch Expenses by Category for Chart
-    $stmt = $pdo->query("SELECT category, SUM(amount) as total FROM transactions WHERE type = 'expense' GROUP BY category");
-    $expense_chart_data = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+// Handle Add Transaction
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_transaction'])) {
+    $type = $_POST['type'];
+    $amount = $_POST['amount'];
+    $category = $_POST['category'];
+    $desc = $_POST['description'];
     
-} catch (PDOException $e) {
-    if ($e->getCode() === '42P01') {
-        die("<div class='p-10 text-center'><strong>Finance tables missing.</strong><br><a href='install.php' class='text-blue-600 underline'>Update Database</a></div>");
-    }
+    // Insert with user_id
+    $stmt = $pdo->prepare("INSERT INTO transactions (user_id, type, amount, category, description, transaction_date) VALUES (?, ?, ?, ?, ?, CURRENT_DATE)");
+    $stmt->execute([$user_id, $type, $amount, $category, $desc]);
+    set_flash('success', 'Transaction added!');
+    header("Location: finance.php");
+    exit;
 }
+
+// Handle Add Savings Goal
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_goal'])) {
+    $name = $_POST['name'];
+    $target = $_POST['target'];
+    $deadline = $_POST['deadline'];
+    
+    // Insert with user_id
+    $stmt = $pdo->prepare("INSERT INTO savings_goals (user_id, name, target_amount, deadline) VALUES (?, ?, ?, ?)");
+    $stmt->execute([$user_id, $name, $target, $deadline]);
+    set_flash('success', 'Savings goal added!');
+    header("Location: finance.php");
+    exit;
+}
+
+// Fetch Data (FILTERED BY USER ID)
+$stmt = $pdo->prepare("SELECT * FROM transactions WHERE user_id = ? ORDER BY transaction_date DESC LIMIT 50");
+$stmt->execute([$user_id]);
+$transactions = $stmt->fetchAll();
+
+$stmt = $pdo->prepare("SELECT * FROM savings_goals WHERE user_id = ?");
+$stmt->execute([$user_id]);
+$goals = $stmt->fetchAll();
+
+// Calculate Totals
+$income = 0;
+$expense = 0;
+foreach ($transactions as $t) {
+    if ($t['type'] == 'income') $income += $t['amount'];
+    else $expense += $t['amount'];
+}
+$balance = $income - $expense;
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Finance Tracker</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Finance - Life OS</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="bg-gray-100 p-6">
-
-    <!-- Navigation -->
-    <nav class="flex gap-4 mb-6 bg-white p-4 rounded shadow overflow-x-auto">
-        <a href="index.php" class="text-gray-600 hover:text-blue-600 font-bold whitespace-nowrap"><i class="fas fa-home"></i> Dashboard</a>
-        <a href="roadmap.php" class="text-gray-600 hover:text-blue-600 font-bold whitespace-nowrap"><i class="fas fa-map"></i> Roadmap</a>
-        <a href="finance.php" class="text-blue-600 font-bold border-b-2 border-blue-600 whitespace-nowrap"><i class="fas fa-wallet"></i> Finance</a>
-        <a href="report.php" class="text-gray-600 hover:text-blue-600 font-bold whitespace-nowrap"><i class="fas fa-chart-pie"></i> Report</a>
+    <nav class="flex gap-4 mb-6 bg-white p-4 rounded shadow">
+        <a href="index.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-home"></i> <?= __('nav_dashboard') ?></a>
+        <a href="projects.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-briefcase"></i> <?= __('nav_projects') ?></a>
+        <a href="roadmap.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-map"></i> <?= __('nav_roadmap') ?></a>
+        <a href="finance.php" class="text-blue-600 font-bold border-b-2 border-blue-600"><i class="fas fa-wallet"></i> <?= __('nav_finance') ?></a>
+        <a href="profile.php" class="text-gray-600 hover:text-blue-600 font-bold ml-auto"><i class="fas fa-user"></i> <?= __('nav_profile') ?></a>
     </nav>
 
-    <!-- Flash Messages -->
     <?php display_flash(); ?>
 
     <!-- Summary Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white p-6 rounded shadow border-l-4 border-green-500">
-            <h3 class="text-gray-500 text-xs font-bold uppercase">Total Balance</h3>
-            <div class="text-3xl font-bold text-gray-800"><?= number_format($balance, 2) ?> <small class="text-sm"><?= APP_CURRENCY ?></small></div>
+        <div class="bg-green-100 p-6 rounded-lg shadow border-l-4 border-green-500">
+            <h3 class="text-green-800 font-bold"><?= __('income') ?></h3>
+            <p class="text-2xl font-bold text-green-600">+<?= number_format($income) ?> <?= APP_CURRENCY ?></p>
         </div>
-        <div class="bg-white p-6 rounded shadow border-l-4 border-blue-500">
-            <h3 class="text-gray-500 text-xs font-bold uppercase">Total Income</h3>
-            <div class="text-3xl font-bold text-blue-600">+<?= number_format($income, 2) ?> <small class="text-sm"><?= APP_CURRENCY ?></small></div>
+        <div class="bg-red-100 p-6 rounded-lg shadow border-l-4 border-red-500">
+            <h3 class="text-red-800 font-bold"><?= __('expenses') ?></h3>
+            <p class="text-2xl font-bold text-red-600">-<?= number_format($expense) ?> <?= APP_CURRENCY ?></p>
         </div>
-        <div class="bg-white p-6 rounded shadow border-l-4 border-red-500">
-            <h3 class="text-gray-500 text-xs font-bold uppercase">Total Expenses</h3>
-            <div class="text-3xl font-bold text-red-600">-<?= number_format($expense, 2) ?> <small class="text-sm"><?= APP_CURRENCY ?></small></div>
+        <div class="bg-blue-100 p-6 rounded-lg shadow border-l-4 border-blue-500">
+            <h3 class="text-blue-800 font-bold"><?= __('balance') ?></h3>
+            <p class="text-2xl font-bold text-blue-600"><?= number_format($balance) ?> <?= APP_CURRENCY ?></p>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- LEFT: Add Transaction & Recent List -->
-        <div class="lg:col-span-2 space-y-6">
-            <!-- Add Transaction Form -->
-            <div class="bg-white p-4 rounded shadow">
-                <h2 class="font-bold mb-4 text-gray-700">Add Transaction</h2>
-                <form action="finance_action.php" method="POST" class="grid grid-cols-1 md:grid-cols-5 gap-2">
-                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-                    <input type="hidden" name="action" value="add_transaction">
-                    <select name="type" class="border p-2 rounded bg-gray-50">
-                        <option value="expense">Expense (-)</option>
-                        <option value="income">Income (+)</option>
-                    </select>
-                    <input type="number" step="0.01" name="amount" placeholder="Amount" class="border p-2 rounded" required>
-                    <input type="text" name="category" placeholder="Category (e.g. Food)" class="border p-2 rounded" required>
-                    <input type="text" name="description" placeholder="Description" class="border p-2 rounded">
-                    <button type="submit" class="bg-gray-800 text-white p-2 rounded hover:bg-black">Add</button>
-                </form>
-            </div>
-
-            <!-- Recent Transactions -->
-            <div class="bg-white p-4 rounded shadow">
-                <h2 class="font-bold mb-4 text-gray-700">Recent Transactions</h2>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left text-gray-500">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                            <tr>
-                                <th class="px-4 py-3">Date</th>
-                                <th class="px-4 py-3">Category</th>
-                                <th class="px-4 py-3">Desc</th>
-                                <th class="px-4 py-3 text-right">Amount</th>
-                                <th class="px-4 py-3"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach($transactions as $t): ?>
-                            <tr class="border-b hover:bg-gray-50">
-                                <td class="px-4 py-3"><?= $t['transaction_date'] ?></td>
-                                <td class="px-4 py-3 font-medium text-gray-900"><?= htmlspecialchars($t['category']) ?></td>
-                                <td class="px-4 py-3"><?= htmlspecialchars($t['description']) ?></td>
-                                <td class="px-4 py-3 text-right font-bold <?= $t['type'] == 'income' ? 'text-green-600' : 'text-red-600' ?>">
-                                    <?= $t['type'] == 'income' ? '+' : '-' ?><?= number_format($t['amount'], 2) ?> <?= APP_CURRENCY ?>
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    <button class="delete-btn text-gray-300 hover:text-red-500" data-type="transaction" data-id="<?= $t['id'] ?>"><i class="fas fa-trash"></i></button>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- RIGHT: Savings Goals -->
-        <div class="space-y-6">
-            <div class="bg-white p-4 rounded shadow">
-                <h2 class="font-bold mb-4 text-gray-700"><i class="fas fa-piggy-bank text-pink-500 mr-2"></i>Savings Goals</h2>
-                
-                <!-- Add Goal Form -->
-                <form action="finance_action.php" method="POST" class="mb-6 p-3 bg-gray-50 rounded border">
-                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-                    <input type="hidden" name="action" value="add_goal">
-                    <div class="space-y-2">
-                        <input type="text" name="name" placeholder="Goal Name (e.g. New Laptop)" class="w-full border p-2 rounded text-sm" required>
-                        <div class="flex gap-2">
-                            <input type="number" name="target" placeholder="Target Amount" class="w-full border p-2 rounded text-sm" required>
-                            <button type="submit" class="bg-pink-500 text-white px-3 rounded text-sm font-bold">+</button>
-                        </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Transactions Section -->
+        <div>
+            <div class="bg-white p-6 rounded-lg shadow mb-6">
+                <h2 class="font-bold text-xl mb-4"><?= __('add_transaction') ?></h2>
+                <form method="POST" class="space-y-4">
+                    <input type="hidden" name="add_transaction" value="1">
+                    <div class="grid grid-cols-2 gap-4">
+                        <select name="type" class="border p-2 rounded w-full">
+                            <option value="expense"><?= __('expenses') ?></option>
+                            <option value="income"><?= __('income') ?></option>
+                        </select>
+                        <input type="number" name="amount" placeholder="<?= __('amount_placeholder') ?>" class="border p-2 rounded w-full" required>
                     </div>
+                    <input type="text" name="category" placeholder="<?= __('category_placeholder') ?>" class="border p-2 rounded w-full" required>
+                    <input type="text" name="description" placeholder="<?= __('description_placeholder') ?>" class="border p-2 rounded w-full">
+                    <button class="bg-blue-600 text-white px-4 py-2 rounded w-full font-bold hover:bg-blue-700"><?= __('save_transaction') ?></button>
                 </form>
+            </div>
 
-                <!-- Goals List -->
-                <div class="space-y-4">
-                    <?php foreach($goals as $goal): 
-                        $percent = $goal['target_amount'] > 0 ? min(100, round(($goal['current_amount'] / $goal['target_amount']) * 100)) : 0;
-                    ?>
-                    <div class="border-b pb-4 last:border-0">
-                        <div class="flex justify-between items-end mb-1">
-                            <span class="font-bold text-gray-700"><?= htmlspecialchars($goal['name']) ?></span>
-                            <span class="text-xs text-gray-500"><?= number_format($goal['current_amount']) ?> / <?= number_format($goal['target_amount']) ?></span>
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="font-bold text-xl mb-4"><?= __('recent_history') ?></h2>
+                <div class="space-y-3">
+                    <?php foreach($transactions as $t): ?>
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <div>
+                            <p class="font-bold text-gray-800"><?= htmlspecialchars($t['category']) ?></p>
+                            <p class="text-xs text-gray-500"><?= htmlspecialchars($t['description']) ?> • <?= $t['transaction_date'] ?></p>
                         </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-                            <div class="bg-pink-500 h-2.5 rounded-full" style="width: <?= $percent ?>%"></div>
-                        </div>
-                        <!-- Quick Add to Goal -->
-                        <form action="finance_action.php" method="POST" class="flex gap-1">
-                            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-                            <input type="hidden" name="action" value="update_goal">
-                            <input type="hidden" name="id" value="<?= $goal['id'] ?>">
-                            <input type="number" name="amount_added" placeholder="Add Amount" class="border p-1 text-xs rounded w-24">
-                            <button type="submit" class="bg-green-500 text-white px-2 py-1 rounded text-xs">Save</button>
-                        </form>
+                        <span class="font-bold <?= $t['type'] == 'income' ? 'text-green-600' : 'text-red-600' ?>">
+                            <?= $t['type'] == 'income' ? '+' : '-' ?><?= number_format($t['amount']) ?>
+                        </span>
                     </div>
                     <?php endforeach; ?>
                 </div>
             </div>
         </div>
+
+        <!-- Savings Goals Section -->
+        <div>
+            <div class="bg-white p-6 rounded-lg shadow mb-6">
+                <h2 class="font-bold text-xl mb-4"><?= __('new_savings_goal') ?></h2>
+                <form method="POST" class="space-y-4">
+                    <input type="hidden" name="add_goal" value="1">
+                    <input type="text" name="name" placeholder="<?= __('goal_name_placeholder') ?>" class="border p-2 rounded w-full" required>
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="number" name="target" placeholder="<?= __('target_amount_placeholder') ?>" class="border p-2 rounded w-full" required>
+                        <input type="date" name="deadline" class="border p-2 rounded w-full">
+                    </div>
+                    <button class="bg-purple-600 text-white px-4 py-2 rounded w-full font-bold hover:bg-purple-700"><?= __('set_goal') ?></button>
+                </form>
+            </div>
+
+            <div class="space-y-4">
+                <?php foreach($goals as $g): 
+                    $percent = $g['target_amount'] > 0 ? ($g['current_amount'] / $g['target_amount']) * 100 : 0;
+                ?>
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <div class="flex justify-between mb-2">
+                        <span class="font-bold"><?= htmlspecialchars($g['name']) ?></span>
+                        <span class="text-sm text-gray-600"><?= number_format($g['current_amount']) ?> / <?= number_format($g['target_amount']) ?></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div class="bg-purple-600 h-2.5 rounded-full" style="width: <?= min(100, $percent) ?>%"></div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
     </div>
-
-    <script>
-        // Delete Functionality
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                if(!confirm('Are you sure you want to delete this transaction?')) return;
-                
-                const id = this.dataset.id;
-                const type = this.dataset.type;
-
-                fetch('delete_item.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `type=${type}&id=${id}`
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if(data.status === 'success') {
-                        window.location.reload();
-                    } else {
-                        alert('Error deleting item');
-                    }
-                })
-                .catch(err => console.error(err));
-            });
-        });
-
-        // Expense Chart
-        const ctx = document.getElementById('expenseChart');
-        if (ctx) {
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: <?= json_encode(array_keys($expense_chart_data)) ?>,
-                    datasets: [{
-                        data: <?= json_encode(array_values($expense_chart_data)) ?>,
-                        backgroundColor: ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899'],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' }
-                    }
-                }
-            });
-        }
-    </script>
 </body>
 </html>

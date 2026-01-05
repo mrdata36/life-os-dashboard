@@ -1,158 +1,99 @@
 <?php
 require '../config/db.php';
+require_login();
+$user_id = get_user_id();
 
-$today = date('Y-m-d');
-
-// Fetch Roadmap Items
-try {
-    $query = "SELECT * FROM roadmap ORDER BY scheduled_date ASC";
-    $roadmap_items = $pdo->query($query)->fetchAll();
-} catch (PDOException $e) {
-    // If table doesn't exist (Postgres error 42P01), suggest running installer
-    if ($e->getCode() === '42P01') {
-        die("<div style='font-family:sans-serif;padding:20px;text-align:center;margin-top:50px;'><strong>Roadmap table missing.</strong><br><br><a href='install.php' style='color:white;background:#2563eb;padding:10px 20px;text-decoration:none;border-radius:5px;'>Update Database</a></div>");
-    }
-    die("Database Error: " . htmlspecialchars($e->getMessage()));
+// Handle Add Roadmap Item
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $topic = $_POST['topic'];
+    $desc = $_POST['description'];
+    $date = $_POST['scheduled_date'];
+    
+    // Insert with user_id
+    $stmt = $pdo->prepare("INSERT INTO roadmap (user_id, topic, description, scheduled_date, status) VALUES (?, ?, ?, ?, 'pending')");
+    $stmt->execute([$user_id, $topic, $desc, $date]);
+    set_flash('success', 'Roadmap item added!');
+    header("Location: roadmap.php");
+    exit;
 }
 
-$missed = [];
-$today_items = [];
-$upcoming = [];
-$completed = [];
-
-foreach ($roadmap_items as $item) {
-    if ($item['status'] === 'completed') {
-        $completed[] = $item;
-    } elseif ($item['scheduled_date'] < $today) {
-        $missed[] = $item;
-    } elseif ($item['scheduled_date'] === $today) {
-        $today_items[] = $item;
-    } else {
-        $upcoming[] = $item;
-    }
-}
+// Fetch Items (FILTERED BY USER ID)
+$stmt = $pdo->prepare("SELECT * FROM roadmap WHERE user_id = ? ORDER BY scheduled_date ASC");
+$stmt->execute([$user_id]);
+$roadmap_items = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Study Roadmap</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Roadmap - Life OS</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="bg-gray-100 p-6">
-
-    <!-- Navigation -->
     <nav class="flex gap-4 mb-6 bg-white p-4 rounded shadow">
         <a href="index.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-home"></i> Dashboard</a>
+        <a href="projects.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-briefcase"></i> Projects</a>
         <a href="roadmap.php" class="text-blue-600 font-bold border-b-2 border-blue-600"><i class="fas fa-map"></i> Roadmap</a>
         <a href="finance.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-wallet"></i> Finance</a>
-        <a href="report.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-chart-pie"></i> Report</a>
+        <a href="profile.php" class="text-gray-600 hover:text-blue-600 font-bold ml-auto"><i class="fas fa-user"></i> Profile</a>
     </nav>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- LEFT: Add New & Missed -->
-        <div class="space-y-6">
-            <!-- Add Form -->
-            <div class="bg-white p-4 rounded shadow border-l-4 border-purple-500">
-                <h2 class="font-bold mb-3">Add Study Topic</h2>
-                <form action="roadmap_action.php" method="POST" class="space-y-3">
-                    <input type="hidden" name="action" value="add">
-                    <input type="text" name="topic" placeholder="Topic (e.g. PHP Arrays)" class="w-full border p-2 rounded" required>
-                    <input type="date" name="date" class="w-full border p-2 rounded" required>
-                    <textarea name="description" placeholder="Notes/Resources" class="w-full border p-2 rounded"></textarea>
-                    <button type="submit" class="w-full bg-purple-600 text-white py-2 rounded font-bold">Add to Roadmap</button>
-                </form>
-                <div class="mt-4 pt-4 border-t border-gray-100">
-                    <a href="setup_challenge.php" class="block w-full text-center bg-yellow-500 text-white py-2 rounded font-bold hover:bg-yellow-600"><i class="fas fa-rocket mr-2"></i>Start 30-Day Challenge</a>
-                </div>
-            </div>
+    <?php display_flash(); ?>
 
-            <!-- Missed Items (Alert) -->
-            <?php if (!empty($missed)): ?>
-            <div class="bg-red-50 p-4 rounded shadow border border-red-200">
-                <h2 class="font-bold text-red-600 mb-3"><i class="fas fa-exclamation-triangle"></i> Missed Topics</h2>
-                <?php foreach ($missed as $item): ?>
-                <div class="bg-white p-3 rounded mb-2 shadow-sm">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="font-bold text-gray-800"><?= htmlspecialchars($item['topic']) ?></h3>
-                            <p class="text-xs text-red-500">Due: <?= $item['scheduled_date'] ?></p>
-                        </div>
-                        <span class="text-red-500 font-bold text-xl"><i class="fas fa-times-circle"></i></span>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Add Item Form -->
+        <div class="lg:col-span-1">
+            <div class="bg-white p-6 rounded-lg shadow sticky top-6">
+                <h2 class="font-bold text-xl mb-4 text-purple-700"><i class="fas fa-plus-circle mr-2"></i>Add to Roadmap</h2>
+                <form method="POST" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Topic / Goal</label>
+                        <input type="text" name="topic" placeholder="e.g. Learn React Basics" class="border p-2 rounded w-full" required>
                     </div>
-                    <!-- Reschedule Form -->
-                    <form action="roadmap_action.php" method="POST" class="mt-3 border-t pt-2">
-                        <input type="hidden" name="action" value="reschedule">
-                        <input type="hidden" name="id" value="<?= $item['id'] ?>">
-                        <p class="text-xs font-bold text-gray-600 mb-1">Why didn't you study?</p>
-                        <input type="text" name="reason" placeholder="Reason (e.g. Was sick)" class="w-full border p-1 text-sm rounded mb-2" required>
-                        <p class="text-xs font-bold text-gray-600 mb-1">Reschedule to:</p>
-                        <div class="flex gap-2">
-                            <input type="date" name="new_date" class="w-full border p-1 text-sm rounded" required>
-                            <button type="submit" class="bg-blue-600 text-white px-3 rounded text-xs">Save</button>
-                        </div>
-                    </form>
-                </div>
-                <?php endforeach; ?>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Description</label>
+                        <textarea name="description" placeholder="Details..." class="border p-2 rounded w-full h-24"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Scheduled Date</label>
+                        <input type="date" name="scheduled_date" class="border p-2 rounded w-full" required>
+                    </div>
+                    <button class="bg-purple-600 text-white px-4 py-2 rounded w-full font-bold hover:bg-purple-700">Add to Plan</button>
+                </form>
             </div>
-            <?php endif; ?>
         </div>
 
-        <!-- CENTER: Today & Upcoming -->
-        <div class="lg:col-span-2 space-y-6">
-            <!-- Today -->
-            <div class="bg-white p-4 rounded shadow">
-                <h2 class="font-bold text-xl mb-4 text-green-700"><i class="fas fa-calendar-day"></i> Study Today</h2>
-                <?php if (empty($today_items)): ?>
-                    <p class="text-gray-400 italic">No topics scheduled for today.</p>
-                <?php else: ?>
-                    <?php foreach ($today_items as $item): ?>
-                    <div class="flex justify-between items-center bg-green-50 p-4 rounded mb-2 border border-green-100">
-                        <div>
-                            <h3 class="font-bold text-lg"><?= htmlspecialchars($item['topic']) ?></h3>
-                            <p class="text-sm text-gray-600"><?= htmlspecialchars($item['description']) ?></p>
+        <!-- Timeline Display -->
+        <div class="lg:col-span-2">
+            <h2 class="font-bold text-2xl mb-6 text-gray-800">Your 30-Day Journey</h2>
+            
+            <?php if(empty($roadmap_items)): ?>
+                <div class="bg-white p-8 rounded-lg shadow text-center text-gray-500">
+                    <i class="fas fa-map-signs text-4xl mb-4 text-gray-300"></i>
+                    <p>No roadmap items yet. Start planning your success!</p>
+                </div>
+            <?php else: ?>
+                <div class="space-y-6 relative border-l-4 border-purple-200 ml-4 pl-6">
+                    <?php foreach($roadmap_items as $item): 
+                        $is_past = strtotime($item['scheduled_date']) < strtotime(date('Y-m-d'));
+                        $status_color = $item['status'] == 'completed' ? 'bg-green-100 border-green-500' : ($is_past ? 'bg-red-50 border-red-400' : 'bg-white border-purple-500');
+                    ?>
+                    <div class="relative p-4 rounded-lg shadow border-l-4 <?= $status_color ?>">
+                        <!-- Dot on timeline -->
+                        <div class="absolute -left-[34px] top-6 w-4 h-4 rounded-full bg-purple-500 border-4 border-white shadow"></div>
+                        
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-xs font-bold text-gray-500 uppercase tracking-wide"><?= date('M d, Y', strtotime($item['scheduled_date'])) ?></span>
+                                <h3 class="font-bold text-lg text-gray-800 mt-1"><?= htmlspecialchars($item['topic']) ?></h3>
+                                <p class="text-gray-600 mt-2 text-sm"><?= nl2br(htmlspecialchars($item['description'])) ?></p>
+                            </div>
+                            <span class="text-xs font-bold px-2 py-1 rounded <?= $item['status'] == 'completed' ? 'bg-green-200 text-green-800' : 'bg-gray-200 text-gray-700' ?>"><?= ucfirst($item['status']) ?></span>
                         </div>
-                        <form action="roadmap_action.php" method="POST">
-                            <input type="hidden" name="action" value="complete">
-                            <input type="hidden" name="id" value="<?= $item['id'] ?>">
-                            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700">
-                                <i class="fas fa-check"></i> Done
-                            </button>
-                        </form>
-                    </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-
-            <!-- Upcoming -->
-            <div class="bg-white p-4 rounded shadow">
-                <h2 class="font-bold text-gray-700 mb-4">Upcoming</h2>
-                <div class="space-y-2">
-                    <?php foreach ($upcoming as $item): ?>
-                    <div class="flex justify-between items-center p-3 border-b">
-                        <div>
-                            <span class="font-semibold"><?= htmlspecialchars($item['topic']) ?></span>
-                            <span class="text-xs bg-gray-200 px-2 py-1 rounded ml-2"><?= $item['scheduled_date'] ?></span>
-                        </div>
-                        <form action="roadmap_action.php" method="POST" onsubmit="return confirm('Delete this topic?');">
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="id" value="<?= $item['id'] ?>">
-                            <button class="text-gray-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
-                        </form>
                     </div>
                     <?php endforeach; ?>
                 </div>
-            </div>
-
-            <!-- Completed History (Collapsible or simple list) -->
-            <div class="mt-8">
-                <h3 class="font-bold text-gray-500">Recently Completed</h3>
-                <?php foreach (array_slice($completed, 0, 5) as $item): ?>
-                    <div class="text-sm text-gray-400 line-through"><?= htmlspecialchars($item['topic']) ?> (<?= $item['scheduled_date'] ?>)</div>
-                <?php endforeach; ?>
-            </div>
+            <?php endif; ?>
         </div>
     </div>
 </body>

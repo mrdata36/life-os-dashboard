@@ -139,8 +139,8 @@ try {
         $ai_insights[] = [
             'icon' => 'fa-chart-line',
             'color' => 'text-blue-600',
-            'title' => 'Spending Forecast',
-            'text' => "At this rate, you'll spend <strong>" . number_format($projected) . " " . APP_CURRENCY . "</strong> by month end."
+            'title' => __('spending_forecast'),
+            'text' => sprintf(__('spending_text'), number_format($projected), APP_CURRENCY)
         ];
     }
 } catch (Exception $e) { /* Ignore if finance not ready */ }
@@ -155,7 +155,7 @@ foreach($habits as $h) {
     if($rate < $min_completion) { $min_completion = $rate; $weakest_habit = $h['name']; }
 }
 if($weakest_habit && $min_completion < 60) {
-    $ai_insights[] = [ 'icon' => 'fa-lightbulb', 'color' => 'text-yellow-500', 'title' => 'Smart Suggestion', 'text' => "Struggling with <strong>$weakest_habit</strong>? Try moving it to your 'Focus Time' block." ];
+    $ai_insights[] = [ 'icon' => 'fa-lightbulb', 'color' => 'text-yellow-500', 'title' => __('smart_suggestion'), 'text' => sprintf(__('habit_suggestion_text'), $weakest_habit) ];
 }
 
 ?>
@@ -173,10 +173,11 @@ if($weakest_habit && $min_completion < 60) {
 <body class="bg-gray-100 p-6">
 
 <nav class="flex gap-4 mb-6 bg-white p-4 rounded shadow">
-    <a href="index.php" class="text-blue-600 font-bold border-b-2 border-blue-600"><i class="fas fa-home"></i> Dashboard</a>
-    <a href="roadmap.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-map"></i> Roadmap</a>
-    <a href="finance.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-wallet"></i> Finance</a>
-    <a href="report.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-chart-pie"></i> Report</a>
+    <a href="index.php" class="text-blue-600 font-bold border-b-2 border-blue-600"><i class="fas fa-home"></i> <?= __('nav_dashboard') ?></a>
+    <a href="projects.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-briefcase"></i> <?= __('nav_projects') ?></a>
+    <a href="roadmap.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-map"></i> <?= __('nav_roadmap') ?></a>
+    <a href="finance.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-wallet"></i> <?= __('nav_finance') ?></a>
+    <a href="report.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-chart-pie"></i> <?= __('nav_report') ?></a>
     <div class="ml-auto flex items-center gap-3">
         <a href="profile.php" class="flex items-center gap-2 text-gray-700 font-bold hover:text-blue-600">
             <?php if(!empty($current_user['profile_image'])): ?>
@@ -193,16 +194,16 @@ if($weakest_habit && $min_completion < 60) {
 <?php display_flash(); ?>
 
 <div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold text-gray-800">Success Dashboard</h1>
+    <h1 class="text-2xl font-bold text-gray-800"><?= __('dashboard_title') ?></h1>
     <div class="flex gap-4">
         <!-- Analytics Card 1 -->
         <div class="bg-white px-4 py-2 rounded-lg shadow text-center min-w-[100px]">
-            <span class="text-xs text-gray-500 uppercase font-bold"><i class="fas fa-trophy text-yellow-500 mr-1"></i> Best Focus</span>
+            <span class="text-xs text-gray-500 uppercase font-bold"><i class="fas fa-trophy text-yellow-500 mr-1"></i> <?= __('best_focus') ?></span>
             <div class="text-lg font-bold text-gray-700"><?= htmlspecialchars($best_category) ?></div>
         </div>
         <!-- Analytics Card 2 -->
         <div class="bg-white px-4 py-2 rounded-lg shadow text-center min-w-[100px]">
-            <span class="text-xs text-gray-500 uppercase font-bold"><i class="fas fa-chart-line text-blue-500 mr-1"></i> Rate</span>
+            <span class="text-xs text-gray-500 uppercase font-bold"><i class="fas fa-chart-line text-blue-500 mr-1"></i> <?= __('rate') ?></span>
             <div class="text-lg font-bold <?= $weekly_avg >= 80 ? 'text-green-600' : ($weekly_avg >= 50 ? 'text-yellow-600' : 'text-red-600') ?>">
                 <?= $weekly_avg ?>%
             </div>
@@ -213,7 +214,7 @@ if($weakest_habit && $min_completion < 60) {
 <!-- SMART AI INSIGHTS -->
 <?php if(!empty($ai_insights)): ?>
 <div class="mb-8 bg-gradient-to-r from-slate-800 to-slate-900 rounded-lg shadow-lg p-6 text-white border border-slate-700">
-    <h2 class="font-bold text-lg mb-4 flex items-center text-blue-400"><i class="fas fa-robot mr-2"></i> AI Assistant Insights</h2>
+    <h2 class="font-bold text-lg mb-4 flex items-center text-blue-400"><i class="fas fa-robot mr-2"></i> <?= __('ai_insights') ?></h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <?php foreach($ai_insights as $insight): ?>
         <div class="bg-white/5 p-4 rounded-lg backdrop-blur-sm border border-white/10 flex items-start gap-4 hover:bg-white/10 transition">
@@ -232,7 +233,7 @@ if($weakest_habit && $min_completion < 60) {
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
     <!-- Add Habit Form -->
     <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
-        <h2 class="font-semibold mb-2 text-gray-700"><i class="fas fa-plus-circle mr-2"></i>Add New Habit</h2>
+        <h2 class="font-semibold mb-2 text-gray-700"><i class="fas fa-plus-circle mr-2"></i><?= __('add_habit') ?></h2>
         <form action="add_habit.php" method="POST" class="flex gap-2">
             <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
             <input type="text" name="name" placeholder="Habit name (e.g. Read 10 pages)" class="border p-2 rounded w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" required>
@@ -248,7 +249,7 @@ if($weakest_habit && $min_completion < 60) {
 
     <!-- Add Task Form -->
     <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
-        <h2 class="font-semibold mb-2 text-gray-700"><i class="fas fa-tasks mr-2"></i>Add Task for Today</h2>
+        <h2 class="font-semibold mb-2 text-gray-700"><i class="fas fa-tasks mr-2"></i><?= __('add_task') ?></h2>
         <form action="add_task.php" method="POST" class="flex gap-2">
             <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
             <input type="text" name="title" placeholder="Task title (e.g. Email Client)" class="border p-2 rounded w-full text-sm focus:outline-none focus:ring-2 focus:ring-green-200" required>
@@ -262,7 +263,7 @@ if($weakest_habit && $min_completion < 60) {
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
     <!-- Pomodoro Timer -->
     <div class="lg:col-span-1 bg-white p-4 rounded-lg shadow border-l-4 border-red-500 flex flex-col items-center justify-center">
-        <h2 class="font-semibold mb-2 text-gray-700"><i class="fas fa-clock mr-2"></i>Focus Timer</h2>
+        <h2 class="font-semibold mb-2 text-gray-700"><i class="fas fa-clock mr-2"></i><?= __('focus_timer') ?></h2>
         <div class="flex gap-2 mb-3">
             <button class="timer-mode active ring-2 ring-offset-1 bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold hover:bg-red-200" data-time="25">Focus</button>
             <button class="timer-mode bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold hover:bg-blue-200" data-time="5">Short</button>
@@ -278,7 +279,7 @@ if($weakest_habit && $min_completion < 60) {
     </div>
     <!-- 30-Day Challenge Progress -->
     <div class="lg:col-span-2 bg-white p-4 rounded-lg shadow border-l-4 border-purple-500 flex flex-col justify-center">
-        <h2 class="font-semibold mb-2 text-gray-700"><i class="fas fa-rocket mr-2"></i>30-Day Challenge Progress</h2>
+        <h2 class="font-semibold mb-2 text-gray-700"><i class="fas fa-rocket mr-2"></i><?= __('challenge_progress') ?></h2>
         <div class="w-full bg-gray-200 rounded-full h-4">
             <div class="bg-purple-600 h-4 rounded-full text-center text-white text-xs font-bold" style="width: <?= $challenge_progress ?>%"><?= $challenge_progress ?>%</div>
         </div>
@@ -313,7 +314,7 @@ if($weakest_habit && $min_completion < 60) {
 
 <!-- HABITS TRACKER -->
 <section class="mb-8">
-    <h2 class="font-semibold mb-2">Habits Tracker (Weekly)</h2>
+    <h2 class="font-semibold mb-2"><?= __('habits_tracker') ?></h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <?php foreach($habits as $habit): ?>
         <?php 
@@ -350,7 +351,7 @@ if($weakest_habit && $min_completion < 60) {
 
 <!-- TASKS TODAY -->
 <section>
-    <h2 class="font-semibold mb-2">Tasks Today (<?= $today ?>)</h2>
+    <h2 class="font-semibold mb-2"><?= __('tasks_today') ?> (<?= $today ?>)</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <?php foreach($tasks as $task): 
             $done = $task_logs[$task['id']][$today] ?? false;
@@ -370,7 +371,7 @@ if($weakest_habit && $min_completion < 60) {
 
 <!-- DAILY DONUT CHARTS -->
 <section class="mt-8">
-    <h2 class="font-semibold mb-2">Daily Completion %</h2>
+    <h2 class="font-semibold mb-2"><?= __('daily_completion') ?></h2>
     <div class="grid grid-cols-1 md:grid-cols-7 gap-4">
         <?php foreach($week_days as $day): ?>
         <div class="bg-white p-4 rounded-lg shadow flex flex-col items-center">

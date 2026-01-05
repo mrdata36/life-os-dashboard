@@ -1,11 +1,22 @@
 <?php
 require '../config/db.php';
 
+require_login();
+$user_id = get_user_id();
+
 // Fetch Roadmap Stats
 try {
-    $total_roadmap = $pdo->query("SELECT COUNT(*) FROM roadmap")->fetchColumn();
-    $completed_roadmap = $pdo->query("SELECT COUNT(*) FROM roadmap WHERE status = 'completed'")->fetchColumn();
-    $missed_rescheduled = $pdo->query("SELECT SUM(missed_count) FROM roadmap")->fetchColumn() ?: 0;
+    $total_roadmap = $pdo->prepare("SELECT COUNT(*) FROM roadmap WHERE user_id = ?");
+    $total_roadmap->execute([$user_id]);
+    $total_roadmap = $total_roadmap->fetchColumn();
+
+    $completed_roadmap = $pdo->prepare("SELECT COUNT(*) FROM roadmap WHERE status = 'completed' AND user_id = ?");
+    $completed_roadmap->execute([$user_id]);
+    $completed_roadmap = $completed_roadmap->fetchColumn();
+
+    $missed_rescheduled = $pdo->prepare("SELECT SUM(missed_count) FROM roadmap WHERE user_id = ?");
+    $missed_rescheduled->execute([$user_id]);
+    $missed_rescheduled = $missed_rescheduled->fetchColumn() ?: 0;
 } catch (PDOException $e) {
     // If table doesn't exist, suggest running installer
     if ($e->getCode() === '42P01') {
@@ -15,7 +26,9 @@ try {
 }
 
 // Fetch Habit Stats (Last 30 days)
-$habit_logs_count = $pdo->query("SELECT COUNT(*) FROM habit_logs WHERE completed = true AND log_date > NOW() - INTERVAL '30 days'")->fetchColumn();
+$habit_logs_count = $pdo->prepare("SELECT COUNT(*) FROM habit_logs hl JOIN habits h ON hl.habit_id = h.id WHERE hl.completed = true AND hl.log_date > NOW() - INTERVAL '30 days' AND h.user_id = ?");
+$habit_logs_count->execute([$user_id]);
+$habit_logs_count = $habit_logs_count->fetchColumn();
 
 ?>
 <!DOCTYPE html>
@@ -31,6 +44,7 @@ $habit_logs_count = $pdo->query("SELECT COUNT(*) FROM habit_logs WHERE completed
 
     <nav class="flex gap-4 mb-6 bg-white p-4 rounded shadow">
         <a href="index.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-home"></i> Dashboard</a>
+        <a href="projects.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-briefcase"></i> Projects</a>
         <a href="roadmap.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-map"></i> Roadmap</a>
         <a href="finance.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-wallet"></i> Finance</a>
         <a href="report.php" class="text-blue-600 font-bold border-b-2 border-blue-600"><i class="fas fa-chart-pie"></i> Report</a>

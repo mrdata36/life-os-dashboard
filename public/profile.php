@@ -21,20 +21,26 @@ try {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         // 1. Update Basic Info
+        $username = trim($_POST['username']);
+        $email = trim($_POST['email']);
         $full_name = trim($_POST['full_name']);
         $phone = trim($_POST['phone']);
         
-        $stmt = $pdo->prepare("UPDATE users SET full_name = ?, phone_number = ? WHERE id = ?");
-        $stmt->execute([$full_name, $phone, $user_id]);
+        $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ?, full_name = ?, phone_number = ? WHERE id = ?");
+        $stmt->execute([$username, $email, $full_name, $phone, $user_id]);
+        
+        // Update session
+        $_SESSION['username'] = $username;
 
         // 2. Update Settings
         $currency = $_POST['currency'];
         $theme = $_POST['theme'];
+        $language = $_POST['language'];
         
         // Upsert Settings
-        $stmt = $pdo->prepare("INSERT INTO user_settings (user_id, currency, theme) VALUES (?, ?, ?) 
-                               ON CONFLICT (user_id) DO UPDATE SET currency = EXCLUDED.currency, theme = EXCLUDED.theme");
-        $stmt->execute([$user_id, $currency, $theme]);
+        $stmt = $pdo->prepare("INSERT INTO user_settings (user_id, currency, theme, language) VALUES (?, ?, ?, ?) 
+                               ON CONFLICT (user_id) DO UPDATE SET currency = EXCLUDED.currency, theme = EXCLUDED.theme, language = EXCLUDED.language");
+        $stmt->execute([$user_id, $currency, $theme, $language]);
 
         // 3. Handle Image Upload
         if (!empty($_FILES['profile_image']['name'])) {
@@ -55,6 +61,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: profile.php");
         exit;
     } catch (PDOException $e) {
+        if ($e->getCode() === '23505') {
+             set_flash('error', 'Username or Email already taken.');
+             header("Location: profile.php");
+             exit;
+        }
         if ($e->getCode() === '42703' || $e->getCode() === '42P01') {
              die("<div style='font-family:sans-serif;padding:20px;text-align:center;margin-top:50px;'><strong>Database needs update.</strong><br><br><a href='install.php' style='color:white;background:#2563eb;padding:10px 20px;text-decoration:none;border-radius:5px;'>Update Database</a></div>");
         }
@@ -73,6 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <nav class="flex gap-4 mb-6 bg-white p-4 rounded shadow">
         <a href="index.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-home"></i> Dashboard</a>
+        <a href="projects.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-briefcase"></i> Projects</a>
         <a href="profile.php" class="text-blue-600 font-bold border-b-2 border-blue-600"><i class="fas fa-user"></i> Profile</a>
         <a href="logout.php" class="text-red-500 font-bold ml-auto"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </nav>
@@ -103,6 +115,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Personal Info -->
                 <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Username</label>
+                    <input type="text" name="username" value="<?= htmlspecialchars($user['username']) ?>" class="w-full border p-2 rounded" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Email</label>
+                    <input type="email" name="email" value="<?= htmlspecialchars($user['email']) ?>" class="w-full border p-2 rounded" required>
+                </div>
+                <div>
                     <label class="block text-sm font-bold text-gray-700 mb-2">Full Name</label>
                     <input type="text" name="full_name" value="<?= htmlspecialchars($user['full_name'] ?? '') ?>" class="w-full border p-2 rounded">
                 </div>
@@ -125,6 +145,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <select name="theme" class="w-full border p-2 rounded bg-white">
                         <option value="light" <?= ($settings['theme'] ?? '') == 'light' ? 'selected' : '' ?>>Light Mode</option>
                         <option value="dark" <?= ($settings['theme'] ?? '') == 'dark' ? 'selected' : '' ?>>Dark Mode</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Language / Lugha</label>
+                    <select name="language" class="w-full border p-2 rounded bg-white">
+                        <option value="sw" <?= ($settings['language'] ?? 'sw') == 'sw' ? 'selected' : '' ?>>Kiswahili</option>
+                        <option value="en" <?= ($settings['language'] ?? '') == 'en' ? 'selected' : '' ?>>English</option>
                     </select>
                 </div>
                 <div class="md:col-span-2">

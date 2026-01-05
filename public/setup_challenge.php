@@ -1,6 +1,9 @@
 <?php
 require '../config/db.php';
 
+require_login();
+$user_id = get_user_id();
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $start_date = $_POST['start_date'] ?? date('Y-m-d');
     
@@ -38,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]
     ];
 
-    $stmt = $pdo->prepare("INSERT INTO roadmap (topic, description, scheduled_date) VALUES (?, ?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO roadmap (user_id, topic, description, scheduled_date) VALUES (?, ?, ?, ?)");
 
     for ($day = 1; $day <= 30; $day++) {
         // Calculate date for each day
@@ -56,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($block_data) {
             $topic = "Siku $day: " . $block_data['theme'];
             $description = $block_data['details'];
-            $stmt->execute([$topic, $description, $date]);
+            $stmt->execute([$user_id, $topic, $description, $date]);
         }
     }
 

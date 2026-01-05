@@ -1,6 +1,9 @@
 <?php
 require '../config/db.php';
 
+require_login();
+$user_id = get_user_id();
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Security Check
     if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
@@ -18,8 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $date = $_POST['date'] ?: date('Y-m-d');
 
         if ($amount > 0) {
-            $stmt = $pdo->prepare("INSERT INTO transactions (type, amount, category, description, transaction_date) VALUES (?, ?, ?, ?, ?)");
-            $stmt->execute([$type, $amount, $category, $desc, $date]);
+            $stmt = $pdo->prepare("INSERT INTO transactions (user_id, type, amount, category, description, transaction_date) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$user_id, $type, $amount, $category, $desc, $date]);
             set_flash('success', 'Transaction added successfully!');
         }
     }
@@ -31,8 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $deadline = !empty($_POST['deadline']) ? $_POST['deadline'] : null;
 
         if (!empty($name) && $target > 0) {
-            $stmt = $pdo->prepare("INSERT INTO savings_goals (name, target_amount, current_amount, deadline) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$name, $target, $current, $deadline]);
+            $stmt = $pdo->prepare("INSERT INTO savings_goals (user_id, name, target_amount, current_amount, deadline) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$user_id, $name, $target, $current, $deadline]);
             set_flash('success', 'Savings goal created!');
         }
     }
@@ -42,8 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $amount_added = (float) $_POST['amount_added'];
         
         if ($id > 0 && $amount_added != 0) {
-            $stmt = $pdo->prepare("UPDATE savings_goals SET current_amount = current_amount + ? WHERE id = ?");
-            $stmt->execute([$amount_added, $id]);
+            $stmt = $pdo->prepare("UPDATE savings_goals SET current_amount = current_amount + ? WHERE id = ? AND user_id = ?");
+            $stmt->execute([$amount_added, $id, $user_id]);
             set_flash('success', 'Goal updated!');
         }
     }

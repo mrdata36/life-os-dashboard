@@ -1,6 +1,9 @@
 <?php
 require '../config/db.php';
 
+require_login();
+$user_id = get_user_id();
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
@@ -10,14 +13,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $desc = trim($_POST['description'] ?? '');
         
         if(!empty($topic) && !empty($date)) {
-            $stmt = $pdo->prepare("INSERT INTO roadmap (topic, description, scheduled_date) VALUES (?, ?, ?)");
-            $stmt->execute([$topic, $desc, $date]);
+            $stmt = $pdo->prepare("INSERT INTO roadmap (user_id, topic, description, scheduled_date) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$user_id, $topic, $desc, $date]);
         }
     }
     elseif ($action === 'complete') {
         $id = $_POST['id'];
-        $stmt = $pdo->prepare("UPDATE roadmap SET status = 'completed' WHERE id = ?");
-        $stmt->execute([$id]);
+        $stmt = $pdo->prepare("UPDATE roadmap SET status = 'completed' WHERE id = ? AND user_id = ?");
+        $stmt->execute([$id, $user_id]);
     }
     elseif ($action === 'reschedule') {
         $id = $_POST['id'];
@@ -25,13 +28,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $new_date = $_POST['new_date'];
         
         // Update: Set new date, save reason, increment missed count, reset status to pending
-        $stmt = $pdo->prepare("UPDATE roadmap SET scheduled_date = ?, reason_missed = ?, missed_count = missed_count + 1, status = 'pending' WHERE id = ?");
-        $stmt->execute([$new_date, $reason, $id]);
+        $stmt = $pdo->prepare("UPDATE roadmap SET scheduled_date = ?, reason_missed = ?, missed_count = missed_count + 1, status = 'pending' WHERE id = ? AND user_id = ?");
+        $stmt->execute([$new_date, $reason, $id, $user_id]);
     }
     elseif ($action === 'delete') {
         $id = $_POST['id'];
-        $stmt = $pdo->prepare("DELETE FROM roadmap WHERE id = ?");
-        $stmt->execute([$id]);
+        $stmt = $pdo->prepare("DELETE FROM roadmap WHERE id = ? AND user_id = ?");
+        $stmt->execute([$id, $user_id]);
     }
 
     header("Location: roadmap.php");
