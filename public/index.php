@@ -176,6 +176,7 @@ if($weakest_habit && $min_completion < 60) {
     <a href="index.php" class="text-blue-600 font-bold border-b-2 border-blue-600"><i class="fas fa-home"></i> <?= __('nav_dashboard') ?></a>
     <a href="projects.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-briefcase"></i> <?= __('nav_projects') ?></a>
     <a href="roadmap.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-map"></i> <?= __('nav_roadmap') ?></a>
+    <a href="mistakes.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-bug"></i> Analysis</a>
     <a href="finance.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-wallet"></i> <?= __('nav_finance') ?></a>
     <a href="report.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-chart-pie"></i> <?= __('nav_report') ?></a>
     <div class="ml-auto flex items-center gap-3">

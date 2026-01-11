@@ -34,6 +34,7 @@ $roadmap_items = $stmt->fetchAll();
         <a href="index.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-home"></i> Dashboard</a>
         <a href="projects.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-briefcase"></i> Projects</a>
         <a href="roadmap.php" class="text-blue-600 font-bold border-b-2 border-blue-600"><i class="fas fa-map"></i> Roadmap</a>
+        <a href="mistakes.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-bug"></i> Analysis</a>
         <a href="finance.php" class="text-gray-600 hover:text-blue-600 font-bold"><i class="fas fa-wallet"></i> Finance</a>
         <a href="profile.php" class="text-gray-600 hover:text-blue-600 font-bold ml-auto"><i class="fas fa-user"></i> Profile</a>
     </nav>

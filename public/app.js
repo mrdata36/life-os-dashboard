@@ -174,11 +174,24 @@ document.addEventListener('DOMContentLoaded', () => {
             timerInterval = setInterval(() => {
                 timeLeft--;
                 updateTimerDisplay();
+
+                // Warning: 20 seconds remaining
+                if (timeLeft === 20) {
+                    if(alarmSound) {
+                        alarmSound.currentTime = 0;
+                        alarmSound.play().catch(e => console.error(e));
+                    }
+                    if(timerDisplay) timerDisplay.classList.add('text-red-600', 'animate-pulse');
+                }
+
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
-                    if(alarmSound) alarmSound.play();
-                    alert("Time for a break!");
-                    resetTimer();
+                    if(timerDisplay) timerDisplay.classList.remove('text-red-600', 'animate-pulse');
+                    if(alarmSound) alarmSound.play().catch(e => console.error(e));
+                    setTimeout(() => {
+                        alert("Time for a break!");
+                        resetTimer();
+                    }, 100);
                 }
             }, 1000);
         }
@@ -191,6 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const resetTimer = () => {
         pauseTimer();
+        if(timerDisplay) timerDisplay.classList.remove('text-red-600', 'animate-pulse');
         const activeBtn = document.querySelector('.timer-mode.active');
         timeLeft = (activeBtn ? parseInt(activeBtn.dataset.time) : 25) * 60;
         updateTimerDisplay();
@@ -213,6 +227,8 @@ document.addEventListener('DOMContentLoaded', () => {
             modeBtns.forEach(b => b.classList.remove('active', 'ring-2', 'ring-offset-1'));
             // Add to clicked
             this.classList.add('active', 'ring-2', 'ring-offset-1');
+            
+            if(timerDisplay) timerDisplay.classList.remove('text-red-600', 'animate-pulse');
             
             timeLeft = parseInt(this.dataset.time) * 60;
             pauseTimer();
