@@ -2,36 +2,49 @@
 // ================================
 // GLOBAL SETTINGS
 // ================================
-session_start(); // Start session for Flash messages & CSRF
+session_start(); 
 
 // Load Translations
 require_once __DIR__ . '/translations.php';
 
 // ================================
-// DATABASE CONNECTION
+// DATABASE CONNECTION (FIXED FOR RENDER)
 // ================================
 
-// Database credentials
-$host = 'localhost';
-$db   = 'task_monitor';
-$user = 'postgres'; // change if you created another user
-$pass = 'mrdata@123';         // postgres password if set
-$charset = 'utf8';
+// 1. Jaribu kusoma DATABASE_URL kutoka Render
+$db_url = getenv('DATABASE_URL');
+
+if ($db_url) {
+    // MAZINGIRA YA RENDER (Production)
+    $db_parts = parse_url($db_url);
+    
+    $host = $db_parts['host'];
+    $port = $db_parts['port'] ?? 5432;
+    $user = $db_parts['user'];
+    $pass = $db_parts['pass'];
+    $db   = ltrim($db_parts['path'], '/');
+} else {
+    // MAZINGIRA YA LOCALHOST (Ubuntu yako)
+    $host = 'localhost';
+    $db   = 'task_monitor';
+    $user = 'postgres'; 
+    $pass = 'mrdata@123'; 
+    $port = 5432;
+}
 
 // DSN string for PDO
-$dsn = "pgsql:host=$host;dbname=$db";
+$dsn = "pgsql:host=$host;port=$port;dbname=$db";
 
 try {
-    // Create PDO instance
     $pdo = new PDO($dsn, $user, $pass, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
 } catch (PDOException $e) {
-    // Error handling
-    // In production, log this to a file instead of showing the user
     error_log($e->getMessage());
+    // Kama unataka kuona error halisi wakati wa kutengeneza, unaweza kutoa maoni (uncomment) hapa chini:
+    // die("Connection failed: " . $e->getMessage()); 
     die("Database connection failed. Please check logs.");
 }
 
@@ -39,7 +52,6 @@ try {
 // HELPER FUNCTIONS (Security & UX)
 // ================================
 
-// Generate CSRF Token to protect forms
 function generate_csrf_token() {
     if (empty($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -47,17 +59,14 @@ function generate_csrf_token() {
     return $_SESSION['csrf_token'];
 }
 
-// Validate CSRF Token
 function validate_csrf_token($token) {
     return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
 }
 
-// Set Flash Message (Success/Error)
 function set_flash($type, $message) {
     $_SESSION['flash'] = ['type' => $type, 'message' => $message];
 }
 
-// Display Flash Message
 function display_flash() {
     if (isset($_SESSION['flash'])) {
         $flash = $_SESSION['flash'];
@@ -88,7 +97,6 @@ function get_user_id() {
     return $_SESSION['user_id'] ?? null;
 }
 
-// Get User Currency Preference
 function get_currency() {
     global $pdo;
     if (is_logged_in()) {
@@ -97,15 +105,12 @@ function get_currency() {
             $stmt->execute([get_user_id()]);
             $currency = $stmt->fetchColumn();
             if ($currency) return $currency;
-        } catch (PDOException $e) {
-            // Table might not exist yet, ignore error
-        }
+        } catch (PDOException $e) {}
     }
-    return 'TZS'; // Default
+    return 'TZS'; 
 }
 define('APP_CURRENCY', get_currency());
 
-// Get User Language Preference
 function get_language() {
     global $pdo;
     if (is_logged_in()) {
@@ -116,7 +121,7 @@ function get_language() {
             if ($lang) return $lang;
         } catch (PDOException $e) {}
     }
-    return 'sw'; // Default to Swahili for Tanzania
+    return 'sw'; 
 }
 
 function __($key) {
